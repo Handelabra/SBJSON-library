@@ -146,7 +146,6 @@
 				D2AAC07A0554694100DB518D /* Headers */,
 				D2AAC07B0554694100DB518D /* Sources */,
 				D2AAC07C0554694100DB518D /* Frameworks */,
-				4AD8004F12A82BD300557D1F /* ShellScript */,
 			);
 			buildRules = (
 			);
@@ -182,22 +181,6 @@
 		};
 /* End PBXProject section */
 
-/* Begin PBXShellScriptBuildPhase section */
-		4AD8004F12A82BD300557D1F /* ShellScript */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# Purpose:\n#   Create a static library for iPhone from within XCode\n#   Because Apple staff DELIBERATELY broke Xcode to make this impossible from the GUI (Xcode 3.2.3 specifically states this in the Release notes!)\n#   ...no, I don't understand why they did such a stupid thing either!\n#\n# Author: Adam Martin - http://twitter.com/redglassesapps\n# Based on: original script from Eonil (main changes: Eonil's script WILL NOT WORK in Xcode GUI - it WILL CRASH YOUR COMPUTER)\n#\n# More info: see this Stack Overflow question: http://stackoverflow.com/questions/3520977/build-fat-static-library-device-simulator-using-xcode-and-sdk-4\n\n\n#####################[ part 1 ]##################\n# First, work out the BASESDK version number (NB: Apple ought to report this, but they hide it)\n#    (incidental: searching for substrings in sh is a nightmare! Sob)\n\nSDK_VERSION=$(echo ${SDK_NAME} | grep -o '.\\{3\\}$')\n\n# Next, work out if we're in SIM or DEVICE\n\nif [ ${PLATFORM_NAME} = \"iphonesimulator\" ]\nthen\nOTHER_SDK_TO_BUILD=iphoneos${SDK_VERSION}\nelse\nOTHER_SDK_TO_BUILD=iphonesimulator${SDK_VERSION}\nfi\n\necho \"XCode has selected SDK: ${PLATFORM_NAME} with version: ${SDK_VERSION} (although back-targetting: ${IPHONEOS_DEPLOYMENT_TARGET})\"\necho \"...therefore, OTHER_SDK_TO_BUILD = ${OTHER_SDK_TO_BUILD}\"\n#\n#####################[ end of part 1 ]##################\n\n#####################[ part 2 ]##################\n#\n# IF this is the original invocation, invoke WHATEVER other builds are required\n#\n# Xcode is already building ONE target...\n#\n# ...but this is a LIBRARY, so Apple is wrong to set it to build just one.\n# ...we need to build ALL targets\n# ...we MUST NOT re-build the target that is ALREADY being built: Xcode WILL CRASH YOUR COMPUTER if you try this (infinite recursion!)\n#\n#\n# So: build ONLY the missing platforms/configurations.\n\nif [ \"true\" = ${ALREADYINVOKED} ]\nthen\necho \"RECURSION: I am NOT the root invocation, so I'm NOT going to recurse\"\nelse\n# CRITICAL:\n# Prevent infinite recursion (Xcode sucks)\nexport ALREADYINVOKED=\"true\"\n\necho \"RECURSION: I am the root ... recursing all missing build targets NOW...\"\necho \"RECURSION: ...about to invoke: xcodebuild -configuration \\\"${CONFIGURATION}\\\" -target \\\"${TARGET_NAME}\\\" -sdk \\\"${OTHER_SDK_TO_BUULD}\\\" ${ACTION} RUN_CLANG_STATIC_ANALYZER=NO\"\nxcodebuild -configuration \"${CONFIGURATION}\" -target \"${TARGET_NAME}\" -sdk \"${OTHER_SDK_TO_BUILD}\" ${ACTION} RUN_CLANG_STATIC_ANALYZER=NO\nfi\n\nACTION=\"build\"\n\n#Merge all platform binaries as a fat binary for each configurations.\n\nCURRENTCONFIG_DEVICE_DIR=${SYMROOT}/${CONFIGURATION}-iphoneos\nCURRENTCONFIG_SIMULATOR_DIR=${SYMROOT}/${CONFIGURATION}-iphonesimulator\nCURRENTCONFIG_UNIVERSAL_DIR=${SYMROOT}/${CONFIGURATION}-universal\n\n# ... remove the products of previous runs of this script\n#      NB: this directory is ONLY created by this script - it should be safe to delete!\n\nrm -rf \"${CURRENTCONFIG_UNIVERSAL_DIR}\"\nmkdir \"${CURRENTCONFIG_UNIVERSAL_DIR}\"\n\n#\necho \"lipo: for current configuration (${CONFIGURATION}) creating output file: ${CURRENTCONFIG_UNIVERSAL_DIR}/${EXECUTABLE_NAME}\"\nlipo -create -output \"${CURRENTCONFIG_UNIVERSAL_DIR}/${EXECUTABLE_NAME}\" \"${CURRENTCONFIG_DEVICE_DIR}/${EXECUTABLE_NAME}\" \"${CURRENTCONFIG_SIMULATOR_DIR}/${EXECUTABLE_NAME}\"\n\n#########\n#\n# Added: StackOverflow suggestion to also copy \"include\" files\n#    (untested, but should work OK)\n#\nif [ -d \"${CURRENTCONFIG_DEVICE_DIR}/usr/local/include\" ]\nthen\n  mkdir -p \"${CURRENTCONFIG_UNIVERSAL_DIR}/usr/local/include\"\n  cp \"${CURRENTCONFIG_DEVICE_DIR}\"/usr/local/include/* \"${CURRENTCONFIG_UNIVERSAL_DIR}/usr/local/include\"\nfi";
-		};
-/* End PBXShellScriptBuildPhase section */
-
 /* Begin PBXSourcesBuildPhase section */
 		D2AAC07B0554694100DB518D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -219,7 +202,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				ARCHS = "$(VALID_ARCHS)";
 				COPY_PHASE_STRIP = NO;
 				DSTROOT = /tmp/SBJSON.dst;
 				GCC_DYNAMIC_NO_PIC = NO;
@@ -230,22 +213,24 @@
 				GCC_PREFIX_HEADER = SBJSON_Prefix.pch;
 				INSTALL_PATH = /usr/local/lib;
 				PRODUCT_NAME = SBJSON;
+				SKIP_INSTALL = YES;
 			};
 			name = Debug;
 		};
-		1DEB922008733DC00010E9CD /* Release */ = {
+		1DEB922008733DC00010E9CD /* Cupcakes */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				ARCHS = "$(VALID_ARCHS)";
 				DSTROOT = /tmp/SBJSON.dst;
 				GCC_MODEL_TUNING = G5;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = SBJSON_Prefix.pch;
 				INSTALL_PATH = /usr/local/lib;
 				PRODUCT_NAME = SBJSON;
+				SKIP_INSTALL = YES;
 			};
-			name = Release;
+			name = Cupcakes;
 		};
 		1DEB922308733DC00010E9CD /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -255,24 +240,55 @@
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 4.0;
 				OTHER_LDFLAGS = "-ObjC";
 				PREBINDING = NO;
 				SDKROOT = iphoneos;
 			};
 			name = Debug;
 		};
-		1DEB922408733DC00010E9CD /* Release */ = {
+		1DEB922408733DC00010E9CD /* Cupcakes */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				GCC_C_LANGUAGE_STANDARD = c99;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 4.0;
 				OTHER_LDFLAGS = "-ObjC";
 				PREBINDING = NO;
 				SDKROOT = iphoneos;
 			};
-			name = Release;
+			name = Cupcakes;
+		};
+		B0BFFF97144F93CF00FA1586 /* Distribution */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 4.0;
+				OTHER_LDFLAGS = "-ObjC";
+				PREBINDING = NO;
+				SDKROOT = iphoneos;
+			};
+			name = Distribution;
+		};
+		B0BFFF98144F93CF00FA1586 /* Distribution */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(VALID_ARCHS)";
+				DSTROOT = /tmp/SBJSON.dst;
+				GCC_MODEL_TUNING = G5;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = SBJSON_Prefix.pch;
+				INSTALL_PATH = /usr/local/lib;
+				PRODUCT_NAME = SBJSON;
+				SKIP_INSTALL = YES;
+			};
+			name = Distribution;
 		};
 /* End XCBuildConfiguration section */
 
@@ -281,19 +297,21 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1DEB921F08733DC00010E9CD /* Debug */,
-				1DEB922008733DC00010E9CD /* Release */,
+				1DEB922008733DC00010E9CD /* Cupcakes */,
+				B0BFFF98144F93CF00FA1586 /* Distribution */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Cupcakes;
 		};
 		1DEB922208733DC00010E9CD /* Build configuration list for PBXProject "SBJSON" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1DEB922308733DC00010E9CD /* Debug */,
-				1DEB922408733DC00010E9CD /* Release */,
+				1DEB922408733DC00010E9CD /* Cupcakes */,
+				B0BFFF97144F93CF00FA1586 /* Distribution */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Cupcakes;
 		};
 /* End XCConfigurationList section */
 	};
